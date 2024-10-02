@@ -6,9 +6,9 @@ class Connection
     static public function infoDatabase()
     {
         return array(
-            "database" => "tienda",
-            "user" => "user_node",
-            "pass" => "123456"
+            "database" => "u145597152_grupodos",
+            "user" => "u145597152_ugrupodos",
+            "pass" => 'V6w$eW/y&@'
         );
     }
 
@@ -21,7 +21,7 @@ class Connection
     static public function publicAccess()
     {
         // Las tablas que queremos que sean públicas
-        return ["productos", "users"];
+        return ["libros", "usuarios"];
     }
 
     static public function connect()
