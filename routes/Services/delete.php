@@ -41,4 +41,7 @@ if (isset($_GET["id"]) && isset($_GET["nameId"])) {
     );
     echo json_encode($json, http_response_code($json["status"]));
 }
+
+/**Tarea: Validar el token si coincide o no con el alamacenado en la base de datos */
+
 ?>
