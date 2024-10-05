@@ -6,9 +6,9 @@ class Connection
     static public function infoDatabase()
     {
         return array(
-            "database" => "u145597152_grupodos",
-            "user" => "u145597152_ugrupodos",
-            "pass" => 'V6w$eW/y&@'
+            "database" => "tienda",
+            "user" => "user_node",
+            "pass" => "123456"
         );
     }
 
