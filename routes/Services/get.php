@@ -14,18 +14,18 @@ $filterTo = $_GET["filterTo"] ?? null;
 $inTo = $_GET["inTo"] ?? null;
 
 // Verificamos que se haya enviado el nombre de la tabla
-//if ($table === null) {
-    //echo json_encode([
-        //"status" => 400,
-        //"message" => "El parámetro 'table' es requerido"
-    //]);
+if ($table === null) {
+    echo json_encode([
+        "status" => 400,
+        "message" => "El parámetro 'table' es requerido"
+    ]);
+    http_response_code(400); // Establecer código de respuesta HTTP
     return;
-//}
+}
 
-// Instanciamos el modelo
+// Instanciamos el controlador
 $model = new GetController();
 $response = $model->getData($table, $select, $orderBy, $orderMode, $startAt, $endAt);
-
 
 // Verificamos si se obtuvo un resultado
 if (!empty($response)) {
@@ -33,9 +33,11 @@ if (!empty($response)) {
         "status" => 200,
         "data" => $response
     ]);
+    http_response_code(200); // Establecer código de respuesta HTTP
 } else {
     echo json_encode([
         "status" => 404,
         "message" => "No se encontraron datos"
     ]);
+    http_response_code(404); // Establecer código de respuesta HTTP
 }

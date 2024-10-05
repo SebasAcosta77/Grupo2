@@ -4,89 +4,70 @@ require_once "models/getModel.php";
 
 class GetController
 {
+    /* Función genérica para manejar peticiones GET */
+    private static function handleRequest($method, ...$params)
+    {
+        $response = GetModel::$method(...$params);
+        self::fncResponse($response);
+    }
 
-    /*peticiones get sin filtro*/
+    /* Peticiones GET sin filtro */
     static public function getData($table, $select, $orderBy, $orderMode, $startAt, $endAt)
     {
-        // Depuración: Verifica los parámetros recibidos
-        //echo "table: $table, select: $select, orderBy: $orderBy, orderMode: $orderMode, startAt: $startAt, endAt: $endAt<br>";
-
-        $response = GetModel::getData($table, $select, $orderBy, $orderMode, $startAt, $endAt);
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getData', $table, $select, $orderBy, $orderMode, $startAt, $endAt);
     }
 
     static public function getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
     {
-        // Depuración: Verifica los parámetros recibidos
-        echo "table: $table, select: $select, linkTo: $linkTo, equalTo: $equalTo, orderBy: $orderBy, orderMode: $orderMode, startAt: $startAt, endAt: $endAt<br>";
-
-        $response = GetModel::getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getDataFilter', $table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
     }
 
-
-    /*peticiones get entre tablas relacionadas*/
-    static public function getRelData($rel, $type, $select, $equalTo, $orderderBy, $orderMode, $startAt, $endAt)
+    /* Peticiones GET entre tablas relacionadas */
+    static public function getRelData($rel, $type, $select, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
     {
-        $response = GetModel::getRelData($rel, $type, $select, $equalTo, $orderderBy, $orderMode, $startAt, $endAt);
-
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getRelData', $rel, $type, $select, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
     }
 
-    /*peticiones get entre tablas relaciones con filtro */
-    static public function getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderderBy, $orderMode, $startAt, $endAt)
+    /* Peticiones GET entre tablas relaciones con filtro */
+    static public function getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
     {
-        $response = GetModel::getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderderBy, $orderMode, $startAt, $endAt);
-
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getRelDataFilter', $rel, $type, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
     }
 
-    /*peticiones get para busqueda de datos*/
-    static public function getDataSearch($tabla, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt)
+    /* Peticiones GET para búsqueda de datos */
+    static public function getDataSearch($table, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt)
     {
-        $response = GetModel::getDataSearch($tabla, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt);
-
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getDataSearch', $table, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt);
     }
 
-    /*peticiones get para busqueda entre tablas relacionadas*/
-    static public function getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt)
+    /* Peticiones GET para búsqueda entre tablas relacionadas */
+    static public function getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt)
     {
-        $response = GetModel::getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt);
-
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getRelDataSearch', $rel, $type, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt);
     }
-    /*peticiones get para filtrar por rango*/
-    static public function getDataRange($table, $select,  $linkTo, $between1, $between2, $endValue, $searchValue, $orderderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo)
+
+    /* Peticiones GET para filtrar por rango */
+    static public function getDataRange($table, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo)
     {
-        $response = GetModel::getDataRange($table, $select,  $linkTo, $between1, $between2, $endValue, $searchValue, $orderderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo);
-
-        $return = new GetController();
-        $return->fncResponse($response);
+        self::handleRequest('getDataRange', $table, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo);
     }
 
-    public function fncResponse($response)
+    private static function fncResponse($response)
     {
         // Determinar la respuesta y el código de estado
         if (!empty($response)) {
-            $json = array(
+            $json = [
                 'status' => 200,
                 'total' => count($response),
-                'results' => $response
-            );
+                'results' => $response,
+            ];
             http_response_code(200); // Establecer el código de estado HTTP
         } else {
-            $json = array(
+            $json = [
                 'status' => 404,
                 'results' => 'Not Found',
-                'method' => 'get'
-            );
+                'method' => 'get',
+            ];
             http_response_code(404); // Establecer el código de estado HTTP
         }
 
