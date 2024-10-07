@@ -33,7 +33,10 @@ if (!empty($_GET["table"]) && !empty($_GET["id"]) && !empty($_GET["nameId"])) {
 } else {
     jsonResponse(400, "Faltan parámetros");
 }
+<<<<<<< HEAD:routes/Services/delete.php
 
 /** Tarea: Validar el token si coincide o no con el almacenado en la base de datos */
 
+=======
+>>>>>>> parent of 9376664 (02-10-24-1pm):Prueba.php
 ?>
