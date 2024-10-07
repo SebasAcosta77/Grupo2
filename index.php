@@ -1,5 +1,6 @@
 <?php
 <<<<<<< HEAD
+<<<<<<< HEAD
 // Configuración de cabeceras CORS
 header('Access-Control-Allow-Origin: *'); // Cambiar a un origen específico en producción
 header('Access-Control-Allow-Credentials: true');
@@ -20,6 +21,8 @@ require_once "controllers/routers.controllers.php";
 $index = new RoutersController();
 $index->index();
 =======
+=======
+>>>>>>> parent of 9376664 (02-10-24-1pm)
 	if (!empty($_SERVER['HTTPS']) && ('on' == $_SERVER['HTTPS'])) {
 		$uri = 'https://';
 	} else {
@@ -30,4 +33,7 @@ $index->index();
 	exit;
 ?>
 Something is wrong with the XAMPP installation :-(
+<<<<<<< HEAD
+>>>>>>> parent of 9376664 (02-10-24-1pm)
+=======
 >>>>>>> parent of 9376664 (02-10-24-1pm)
