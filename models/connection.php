@@ -21,7 +21,7 @@ class Connection
     static public function publicAccess()
     {
         // Las tablas que queremos que sean públicas
-        return ["productos", "users"];
+        return ["usuario", "libros", "usuario_libro"];
     }
 
     static public function connect()
