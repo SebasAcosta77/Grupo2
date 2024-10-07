@@ -32,8 +32,8 @@ if (isset($_GET["id"]) && isset($_GET["nameId"])) {
     }
 
     // Aquí iría la lógica para actualizar los datos usando PutController
-    $response = PutController::putData($table, $data, $_GET["id"], $_GET["nameId"]);
-
+    $response = PutController::putModel($table, $data, $_GET["id"], $_GET["nameId"]);
+    
     if ($response) {
         echo json_encode([
             "status" => HTTP_OK,
@@ -51,3 +51,5 @@ if (isset($_GET["id"]) && isset($_GET["nameId"])) {
         "result" => "Faltan parámetros"
     ], http_response_code(HTTP_BAD_REQUEST));
 }
+
+?>

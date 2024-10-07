@@ -6,7 +6,7 @@ use Firebase\JWT\JWT;
 
 class PostController
 {
-    /* Función generalizada para registro y login */
+    /*Función generalizada para registro y login*/
     static public function postAuthResponse($table, $data, $suffix, $isLogin = false)
     {
         // En caso de login
@@ -89,7 +89,6 @@ class PostController
         }
     }
 
-    /* Función para manejar la solicitud de recuperación de contraseña */
     public function postPasswordRecoveryRequest($table, $data, $suffix)
     {
         if (!isset($data["email_" . $suffix])) {
@@ -97,66 +96,53 @@ class PostController
             return;
         }
 
-        $email = $data["email_" . $suffix];
-        error_log("Buscando usuario con el email: $email");
-
-        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $email, null, null, null, null);
-
-        if ($user === null) {
-            self::fncResponse(null, "Error al obtener el usuario", $suffix);
-            return;
-        }
+        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null);
 
         if (!empty($user)) {
-            // Resto del código para generar y enviar el código de recuperación...
+            // Generar un código numérico aleatorio de 6 dígitos
+            $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            // Establecer el tiempo de expiración a 1 hora desde ahora
+            $expiration = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+            $updateData = [
+                "reset_code_" . $suffix => $code,
+                "reset_code_exp_" . $suffix => $expiration,
+                "reset_attempts_" . $suffix => 0
+            ];
+
+            $update = PutModel::putData($table, $updateData, $user[0]->{"id_" . $suffix}, "id_" . $suffix);
+
+            if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+                // Crear una instancia de EmailSender
+                $emailSender = new EmailSender();
+
+                // Enviar el correo
+                $emailSent = $emailSender->sendRecoveryCode($data["email_" . $suffix], $code);
+
+                if ($emailSent) {
+                    error_log("Email enviado correctamente");
+                    self::fncResponse([
+                        "message" => "Código de recuperación enviado a tu correo"
+                    ], null, $suffix);
+                } else {
+                    self::fncResponse(null, "Error enviando el email", $suffix);
+                }
+            } else {
+                self::fncResponse(null, "Error actualizando el usuario", $suffix);
+            }
         } else {
             self::fncResponse(null, "Email no encontrado", $suffix);
         }
     }
 
-
-    /* Función para restablecer la contraseña */
-    public function resetPassword($table, $data, $suffix)
+    public function postRecoveryResponse($email)
     {
-        // Verificar que el código de recuperación y la nueva contraseña están presentes
-        if (!isset($data["reset_code_" . $suffix]) || !isset($data["new_password_" . $suffix])) {
-            return self::fncResponse(null, "Código de recuperación y nueva contraseña requeridos", $suffix);
-        }
-
-        // Buscar al usuario por email y el código de recuperación
-        $response = GetModel::getRelDataFilter($table, "*", "reset_code_" . $suffix, $data["reset_code_" . $suffix], null, null, null, null, null);
-
-        if (!empty($response)) {
-            // Verificar si el código de recuperación ha expirado
-            $expirationDate = $response[0]->{"reset_code_exp_" . $suffix};
-            if (strtotime($expirationDate) < time()) {
-                return self::fncResponse(null, "El código de recuperación ha expirado", $suffix);
-            }
-
-            // Encriptar la nueva contraseña
-            $data["new_password_" . $suffix] = password_hash($data["new_password_" . $suffix], PASSWORD_BCRYPT);
-
-            // Actualizar la contraseña en la base de datos
-            $updateData = array(
-                "password_" . $suffix => $data["new_password_" . $suffix],
-                "reset_code_" . $suffix => null, // Limpiar el código de recuperación
-                "reset_code_exp_" . $suffix => null, // Limpiar la fecha de expiración
-                "reset_attempts_" . $suffix => 0 // Reiniciar los intentos
-            );
-
-            $update = PutModel::putData($table, $updateData, $response[0]->{"id_" . $suffix}, "id_" . $suffix);
-
-            if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
-                return self::fncResponse(null, "Contraseña actualizada con éxito", $suffix);
-            } else {
-                return self::fncResponse(null, "Error al actualizar la contraseña", $suffix);
-            }
-        } else {
-            return self::fncResponse(null, "Código de recuperación no válido", $suffix);
-        }
+        $response = PostModel::sendRecoveryCode($email);
+        self::fncResponse($response, null, null);
     }
 
-    /* Función para responder JSON */
+    /*Función para responder JSON*/
     public static function fncResponse($response, $error, $suffix)
     {
         header('Content-Type: application/json'); // Establecer tipo de contenido JSON
