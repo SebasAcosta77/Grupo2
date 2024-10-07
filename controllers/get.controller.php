@@ -7,6 +7,12 @@ class GetController
     /* Función genérica para manejar peticiones GET */
     private static function handleRequest($method, ...$params)
     {
+        // Validar que el método existe en GetModel
+        if (!method_exists('GetModel', $method)) {
+            self::fncResponse(['status' => 400, 'message' => 'Método no válido']);
+            return;
+        }
+        
         $response = GetModel::$method(...$params);
         self::fncResponse($response);
     }
@@ -55,7 +61,7 @@ class GetController
     private static function fncResponse($response)
     {
         // Determinar la respuesta y el código de estado
-        if (!empty($response)) {
+        if (!empty($response) && is_array($response)) {
             $json = [
                 'status' => 200,
                 'total' => count($response),
@@ -63,6 +69,9 @@ class GetController
             ];
             http_response_code(200); // Establecer el código de estado HTTP
         } else {
+            // Registrar el error
+            error_log("Error en la respuesta: " . json_encode($response));
+            
             $json = [
                 'status' => 404,
                 'results' => 'Not Found',

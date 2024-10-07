@@ -1,53 +1,53 @@
 <?php
 
-require_once "models/connection.php";
-require_once "controllers/routers.controllers.php";
 require_once "controllers/get.controller.php";
+require_once "models/getModel.php";
 
-$routesArray = array_filter(explode("/", $_SERVER['REQUEST_URI']));
+// Parámetros
+$select = $_GET["select"] ?? "*";  // Seleccionar todas las columnas si no se especifica
+$table = $_GET["table"] ?? null;
+$orderBy = $_GET["orderBy"] ?? null;
+$orderMode = $_GET["orderMode"] ?? "ASC";
+$startAt = $_GET["startAt"] ?? 0;  // Usar 0 por defecto para la paginación
+$endAt = $_GET["endAt"] ?? 10;     // Usar 10 por defecto si no se proporciona
 
-// Validamos si se hace una petición a la API
-if (count($routesArray) < 2) {
-    echo json_encode(["status" => 404, "results" => "Not Found"], http_response_code(404));
+// Verificamos que se haya enviado el nombre de la tabla
+if (empty($table)) {
+    echo json_encode([
+        "status" => 400,
+        "message" => "El parámetro 'table' es requerido"
+    ]);
+    http_response_code(400); // Establecer código de respuesta HTTP
     return;
 }
 
-$table = explode("?", $routesArray[1])[0]; // Obtener el nombre de la tabla
-$secret_key = Connection::apikey(); // Obtener la clave secreta
-$headers = apache_request_headers(); // Obtener los encabezados
-
-// Función para manejar las solicitudes
-function handleRequest($method, $table) {
-    switch ($method) {
-        case "GET":
-            include "Services/get.php";
-            break;
-        case "POST":
-            include "Services/post.php";
-            break;
-        case "PUT":
-            include "Services/put.php";
-            break;
-        case "DELETE":
-            include "Services/delete.php";
-            break;
-        default:
-            echo json_encode(["status" => 405, "results" => "Method Not Allowed"], http_response_code(405));
-            break;
-    }
+// Validación adicional para evitar inyección SQL
+$validTables = ['libros', 'usuarios']; // Agrega aquí las tablas válidas
+if (!in_array($table, $validTables)) {
+    echo json_encode([
+        "status" => 400,
+        "message" => "La tabla especificada no es válida"
+    ]);
+    http_response_code(400); // Establecer código de respuesta HTTP
+    return;
 }
 
-// Validamos el acceso público o privado
-if (in_array($table, Connection::publicAccess())) {
-    $response = new GetController();
-    $response->getData($table, "*", null, null, null, null);
+// Instanciamos el controlador de datos
+$model = new GetController();
+$response = $model->getData($table, $select, $orderBy, $orderMode, $startAt, $endAt);
 
-    handleRequest($_SERVER['REQUEST_METHOD'], $table);
+// Verificamos si se obtuvo un resultado
+if ($response && !empty($response)) {
+    echo json_encode([
+        "status" => 200,
+        "data" => $response
+    ]);
+    http_response_code(200); // Establecer código de respuesta HTTP
 } else {
-    if (!isset($headers['Authorization']) || $headers['Authorization'] !== $secret_key) {
-        echo json_encode(["status" => 401, "results" => "Unauthorized"], http_response_code(401));
-        return;
-    } else {
-        handleRequest($_SERVER['REQUEST_METHOD'], $table);
-    }
+    echo json_encode([
+        "status" => 404,
+        "message" => "No se encontraron datos"
+    ]);
+    http_response_code(404); // Establecer código de respuesta HTTP
 }
+?>

@@ -10,6 +10,17 @@ define('HTTP_BAD_REQUEST', 400);
 define('HTTP_UNAUTHORIZED', 401);
 define('HTTP_NOT_FOUND', 404);
 
+/** Asegurarse de que el parámetro 'table' esté definido */
+$table = $_GET['table'] ?? null;
+
+if (!$table) {
+    echo json_encode([
+        'status' => HTTP_BAD_REQUEST,
+        'message' => "El parámetro 'table' es requerido"
+    ], http_response_code(HTTP_BAD_REQUEST));
+    return;
+}
+
 /** Separar las propiedades del arreglo */
 $columns = array_keys($_POST);
 
@@ -59,10 +70,20 @@ if ($token) {
 
 /** Manejo de recuperación de contraseña */
 if (isset($_GET["recovery"]) && $_GET["recovery"] == true) {
-    $email = $_POST["email_user"] ?? null;
-    if ($email) {
-        $response->postRecoveryResponse($email);
+    $sufix = $_GET["sufix"] ?? "user";
+    $response->postPasswordRecoveryRequest($table, $_POST, $sufix);
+    return;
+}
+
+// Restablecer contraseña usando el código
+if (isset($_GET["reset"]) && $_GET["reset"] == true) {
+    $code = $_POST['code'] ?? null;
+    $newPassword = $_POST['new_password'] ?? null;
+    
+    if ($code && $newPassword) {
+        $response->resetPassword($table, $code, $newPassword, $sufix);
     } else {
-        echo json_encode(['status' => HTTP_BAD_REQUEST, 'message' => 'Email es requerido'], http_response_code(HTTP_BAD_REQUEST));
+        echo json_encode(['status' => HTTP_BAD_REQUEST, 'message' => 'Código y nueva contraseña requeridos'], http_response_code(HTTP_BAD_REQUEST));
     }
+    return;
 }
