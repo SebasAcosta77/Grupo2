@@ -6,9 +6,9 @@ class Connection
     static public function infoDatabase()
     {
         return array(
-            "database" => "u145597152_grupodos",
-            "user" => "u145597152_ugrupodos",
-            "pass" => 'V6w$eW/y&@'
+            "database" => 'u145597152_grupodos',
+            "user" => 'u145597152_ugrupodos',
+            "pass" =>'V6w$eW/y&@' 
         );
     }
 
@@ -21,79 +21,77 @@ class Connection
     static public function publicAccess()
     {
         // Las tablas que queremos que sean públicas
-        return ["libros", "usuario", "usuario_libro"];
+        return ["productos", "users"];
     }
 
     static public function connect()
     {
         try {
             $link = new PDO(
-                "mysql:host=localhost;dbname=" . self::infoDatabase()["database"],
-                self::infoDatabase()["user"],
-                self::infoDatabase()["pass"]
+                "mysql:host=localhost;dbname=" . Connection::infoDatabase()["database"],
+                Connection::infoDatabase()["user"],
+                Connection::infoDatabase()["pass"]
             );
-            $link->exec("set names utf8mb4"); // Mejor manejo de caracteres
-            $link->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // Manejo de errores
+            $link->exec("set names utf8");
         } catch (PDOException $e) {
-            // Considera registrar el error en un archivo de log
-            error_log("Error de conexión: " . $e->getMessage(), 3, "/var/log/app_errors.log"); // Cambia la ruta según sea necesario
-            die("Error: No se pudo conectar a la base de datos."); // Mensaje más genérico
+            die("Error: " . $e->getMessage());
         }
         return $link;
     }
 
     /* Validar existencia de tablas y columnas en la base de datos */
-    static public function getColumnsData($table, $columns)
-    {
-        $database = self::infoDatabase()["database"];
+static public function getColumnsData($table, $columns)
+{
+    // Traer el nombre de la base de datos
+    $database = Connection::infoDatabase()["database"];
 
-        try {
-            $query = self::connect()->query(
-                "SELECT column_name FROM information_schema.columns 
-                WHERE table_schema = '$database' AND table_name = '$table'"
-            );
+    // Obtener todas las columnas de la tabla en la base de datos
+    $query = Connection::connect()->query(
+        "SELECT column_name FROM information_schema.columns 
+        WHERE table_schema = '$database' AND table_name = '$table'"
+    );
 
-            $result = $query->fetchAll(PDO::FETCH_COLUMN);
+    $result = $query->fetchAll(PDO::FETCH_COLUMN);
 
-            if (empty($result)) {
-                return null; // La tabla no existe
-            }
+    // Validar la existencia de la tabla (si no tiene columnas, no existe)
+    if (empty($result)) {
+        return null; // La tabla no existe
+    }
 
-            if (empty($columns) || !is_array($columns)) {
-                return null; // Retornar null si $columns está vacío o no es un array
-            }
+    // Validar que $columns no esté vacío
+    if (empty($columns) || !is_array($columns)) {
+        return null; // Retornar null si $columns está vacío o no es un array
+    }
 
-            if ($columns[0] == "*") {
-                return $result; // Retornar todas las columnas
-            }
+    // Si se solicitó "*", significa que no importa la validación de columnas
+    if ($columns[0] == "*") {
+        return $result; // Retornar todas las columnas
+    }
 
-            foreach ($columns as $column) {
-                if (!in_array($column, $result)) {
-                    return null; // La columna no existe en la tabla
-                }
-            }
-
-            return $result; // Retornar las columnas si todo está bien
-        } catch (Exception $e) {
-            error_log("Error al obtener columnas: " . $e->getMessage(), 3, "/var/log/app_errors.log");
-            return null; // Manejo de errores
+    // Validar que las columnas solicitadas existan en la tabla
+    foreach ($columns as $column) {
+        if (!in_array($column, $result)) {
+            return null; // La columna no existe en la tabla
         }
     }
+
+    return $result; // Retornar las columnas si todo está bien
+}
+
 
     /* Método para generar token JWT */
     public static function jwt($id, $email)
     {
-        $key = "a2%4ndjle$%&ashbdajs-5avs"; // Considera manejar esta clave de forma segura
+        $key = "a2%4ndjle$%&ashbdajs-5avs"; // Clave secreta para firmar el token
         $issuedAt = time();
         $expirationTime = $issuedAt + 3600; // Tiempo de expiración: 1 hora
         $payload = array(
-            'iat' => $issuedAt,
-            'exp' => $expirationTime,
-            'id' => $id,
-            'email' => $email
+            'iat' => $issuedAt, // Tiempo de emisión
+            'exp' => $expirationTime, // Tiempo de expiración
+            'id' => $id, // ID del usuario
+            'email' => $email // Email del usuario
         );
 
         return $payload; // Devolver el payload para codificarlo más adelante
     }
 }
-?>

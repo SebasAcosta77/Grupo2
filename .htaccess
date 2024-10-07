@@ -3,15 +3,6 @@ Options -MultiViews
 
 RewriteEngine On
 
-# Evitar acceso a archivos sensibles
-<FilesMatch "\.(env|ini|log|htaccess)$">
-    Order Allow,Deny
-    Deny from all
-</FilesMatch>
-
-# Redirigir a una página de error personalizada
-ErrorDocument 404 /404.php
-
 # Verifica si el archivo o directorio existe
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

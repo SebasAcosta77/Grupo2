@@ -92,11 +92,11 @@ class PostController
     public function postPasswordRecoveryRequest($table, $data, $suffix)
     {
         if (!isset($data["email_" . $suffix])) {
-            self::fncResponse(null, "Correo requerido", $suffix);
+            $this->fncResponse(null, "correo requerido", $suffix);
             return;
         }
 
-        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null);
+        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null, null);
 
         if (!empty($user)) {
             // Generar un código numérico aleatorio de 6 dígitos
@@ -113,7 +113,7 @@ class PostController
 
             $update = PutModel::putData($table, $updateData, $user[0]->{"id_" . $suffix}, "id_" . $suffix);
 
-            if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+            if (isset($update["comment"]) && $update["comment"] == "The process was successful") {
                 // Crear una instancia de EmailSender
                 $emailSender = new EmailSender();
 
@@ -121,31 +121,43 @@ class PostController
                 $emailSent = $emailSender->sendRecoveryCode($data["email_" . $suffix], $code);
 
                 if ($emailSent) {
+
                     error_log("Email enviado correctamente");
-                    self::fncResponse([
-                        "message" => "Código de recuperación enviado a tu correo"
+                    $this->fncResponse([
+                        "message" => "Recovery code sent to your email"
                     ], null, $suffix);
                 } else {
-                    self::fncResponse(null, "Error enviando el email", $suffix);
+                    $this->fncResponse(null, "Error enviado email", $suffix);
                 }
             } else {
-                self::fncResponse(null, "Error actualizando el usuario", $suffix);
+                $this->fncResponse(null, "Error actualizando usuario", $suffix);
             }
         } else {
-            self::fncResponse(null, "Email no encontrado", $suffix);
+            $this->fncResponse(null, "Email no encontrado", $suffix);
         }
     }
 
+
+    public function postRecovery($table, $data)
+    {
+        $email = $data['email']; // Asegúrate de que el email esté en los datos enviados
+        $response = PostModel::sendRecoveryCode($email);
+
+        echo json_encode($response, http_response_code($response['status']));
+    }
+
+
+    /** Método para manejar la recuperación de contraseña */
     public function postRecoveryResponse($email)
     {
         $response = PostModel::sendRecoveryCode($email);
-        self::fncResponse($response, null, null);
+        echo json_encode($response, http_response_code($response['status']));
     }
+
 
     /*Función para responder JSON*/
     public static function fncResponse($response, $error, $suffix)
     {
-        header('Content-Type: application/json'); // Establecer tipo de contenido JSON
         if (!empty($response) && is_array($response) && isset($response[0])) {
             if (isset($response[0]->{"password_" . $suffix})) {
                 unset($response[0]->{"password_" . $suffix});
@@ -154,14 +166,13 @@ class PostController
                 'status' => 200,
                 'result' => $response
             );
-            http_response_code(200);
         } else {
             $json = array(
                 'status' => 400,
                 'result' => $error ?? 'Error en la solicitud'
             );
-            http_response_code(400);
         }
-        echo json_encode($json);
+
+        echo json_encode($json, http_response_code($json['status']));
     }
 }

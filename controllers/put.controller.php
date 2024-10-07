@@ -4,18 +4,19 @@ class PutController {
     /* Petición para actualizar datos */
     static public function putData($table, $data, $id, $nameId) {
         $response = PutModel::putData($table, $data, $id, $nameId);
-        self::fncResponse($response);
+        $return = new PutController();
+        $return ->fncResponse($response);
     }
 
     /* Petición para actualizar datos de un usuario */
     static public function putUser($table, $data, $id, $suffix) {
-        if (isset($data["password_" . $suffix]) && ($data["password_" . $suffix] != null)) {
-            // Encriptar la contraseña si está presente
-            $crypt = password_hash($data["password_" . $suffix], PASSWORD_BCRYPT);
-            $data["password_" . $suffix] = $crypt;
+        if (isset($data["password_".$suffix]) && ($data["password_".$suffix] != null)) {
+            $crypt = crypt($data["password_".$suffix], ' ');
+            $data["password_".$suffix] = $crypt;
         }
-        $response = PutModel::putData($table, $data, $id, "id_" . $suffix);
-        self::fncResponse($response);
+        $response = PutModel::putData($table, $data, $id, "id_".$suffix);
+        $return = new PutController();
+        $return ->fncResponse($response);
     }
 
     /* Petición para actualizar datos con condiciones específicas */
@@ -55,28 +56,23 @@ class PutController {
         if ($stmt->execute()) {
             return ['comentario' => 'El proceso fue satisfactorio'];
         } else {
-            // Manejar el error de manera adecuada
-            return ['comentario' => 'Error al actualizar los datos'];
+            return null; // O manejar el error de otra manera
         }
     }
 
-    /* Función para responder con JSON */
-    public static function fncResponse($response) {
-        header('Content-Type: application/json'); // Establecer tipo de contenido JSON
+    public function fncResponse($response) {
         if (!empty($response)) {
             $json = array(
                 'status' => 200,
                 'result' => $response
             );
-            http_response_code(200);
         } else {
             $json = array(
                 'status' => 400,
                 'result' => 'No se pudo actualizar los datos'
             );
-            http_response_code(400);
         }
-        echo json_encode($json);
+        echo json_encode($json, http_response_code($json["status"]));
     }
 }
 ?>
