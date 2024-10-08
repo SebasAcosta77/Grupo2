@@ -14,9 +14,9 @@ class Connection
 
 		$infoDB = array(
 
-			"database" => "u145597152_grupocinco2",
-			"user" => "u145597152_ugrupocinco2",
-			"pass" => "E=VGfw>2"
+			"database" => 'u145597152_grupodos',
+            "user" => 'u145597152_ugrupodos',
+            "pass" =>'V6w$eW/y&@' 
 
 		);
 
