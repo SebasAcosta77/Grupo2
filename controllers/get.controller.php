@@ -1,97 +1,142 @@
 <?php
-require_once "vendor/autoload.php";
-require_once "models/getModel.php";
+
+require_once "models/get.model.php";
 
 class GetController
 {
 
-    /*peticiones get sin filtro*/
-    static public function getData($table, $select, $orderBy, $orderMode, $startAt, $endAt)
-    {
-        // Depuración: Verifica los parámetros recibidos
-        //echo "table: $table, select: $select, orderBy: $orderBy, orderMode: $orderMode, startAt: $startAt, endAt: $endAt<br>";
+	/*=============================================
+	Peticiones GET sin filtro
+	=============================================*/
 
-        $response = GetModel::getData($table, $select, $orderBy, $orderMode, $startAt, $endAt);
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+	static public function getData($table, $select, $orderBy, $orderMode, $startAt, $endAt)
+	{
 
-    static public function getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
-    {
-        // Depuración: Verifica los parámetros recibidos
-        echo "table: $table, select: $select, linkTo: $linkTo, equalTo: $equalTo, orderBy: $orderBy, orderMode: $orderMode, startAt: $startAt, endAt: $endAt<br>";
+		$response = GetModel::getData($table, $select, $orderBy, $orderMode, $startAt, $endAt);
 
-        $response = GetModel::getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
+
+	/*=============================================
+	Peticiones GET con filtro
+	=============================================*/
+
+	static public function getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
+	{
+
+		$response = GetModel::getDataFilter($table, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
+
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
+
+	/*=============================================
+	Peticiones GET sin filtro entre tablas relacionadas
+	=============================================*/
+
+	static public function getRelData($rel, $type, $select, $orderBy, $orderMode, $startAt, $endAt)
+	{
+
+		$response = GetModel::getRelData($rel, $type, $select, $orderBy, $orderMode, $startAt, $endAt);
+
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
 
 
-    /*peticiones get entre tablas relacionadas*/
-    static public function getRelData($rel, $type, $select, $equalTo, $orderderBy, $orderMode, $startAt, $endAt)
-    {
-        $response = GetModel::getRelData($rel, $type, $select, $equalTo, $orderderBy, $orderMode, $startAt, $endAt);
+	/*=============================================
+	Peticiones GET con filtro entre tablas relacionadas
+	=============================================*/
 
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+	static public function getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt)
+	{
 
-    /*peticiones get entre tablas relaciones con filtro */
-    static public function getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderderBy, $orderMode, $startAt, $endAt)
-    {
-        $response = GetModel::getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderderBy, $orderMode, $startAt, $endAt);
+		$response = GetModel::getRelDataFilter($rel, $type, $select, $linkTo, $equalTo, $orderBy, $orderMode, $startAt, $endAt);
 
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
 
-    /*peticiones get para busqueda de datos*/
-    static public function getDataSearch($tabla, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt)
-    {
-        $response = GetModel::getDataSearch($tabla, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt);
+	/*=============================================
+	Peticiones GET para el buscador sin relaciones
+	=============================================*/
 
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+	static public function getDataSearch($table, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt)
+	{
 
-    /*peticiones get para busqueda entre tablas relacionadas*/
-    static public function getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt)
-    {
-        $response = GetModel::getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderderBy, $orderMode, $startAt, $endAt);
+		$response = GetModel::getDataSearch($table, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt);
 
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
-    /*peticiones get para filtrar por rango*/
-    static public function getDataRange($table, $select,  $linkTo, $between1, $between2, $endValue, $searchValue, $orderderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo)
-    {
-        $response = GetModel::getDataRange($table, $select,  $linkTo, $between1, $between2, $endValue, $searchValue, $orderderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo);
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
 
-        $return = new GetController();
-        $return->fncResponse($response);
-    }
+	/*=============================================
+	Peticiones GET para el buscador entre tablas relacionadas
+	=============================================*/
 
-    public function fncResponse($response)
-    {
-        // Determinar la respuesta y el código de estado
-        if (!empty($response)) {
-            $json = array(
-                'status' => 200,
-                'total' => count($response),
-                'results' => $response
-            );
-            http_response_code(200); // Establecer el código de estado HTTP
-        } else {
-            $json = array(
-                'status' => 404,
-                'results' => 'Not Found',
-                'method' => 'get'
-            );
-            http_response_code(404); // Establecer el código de estado HTTP
-        }
+	static public function getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt)
+	{
 
-        // Enviar la respuesta en formato JSON
-        header('Content-Type: application/json');
-        echo json_encode($json);
-    }
+		$response = GetModel::getRelDataSearch($rel, $type, $select, $linkTo, $search, $orderBy, $orderMode, $startAt, $endAt);
+
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
+
+	/*=============================================
+	Peticiones GET para selección de rangos
+	=============================================*/
+
+	static public function getDataRange($table, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo)
+	{
+
+		$response = GetModel::getDataRange($table, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo);
+
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
+
+	/*=============================================
+	Peticiones GET para selección de rangos con relaciones
+	=============================================*/
+
+	static public function getRelDataRange($rel, $type, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo)
+	{
+
+		$response = GetModel::getRelDataRange($rel, $type, $select, $linkTo, $between1, $between2, $orderBy, $orderMode, $startAt, $endAt, $filterTo, $inTo);
+
+		$return = new GetController();
+		$return->fncResponse($response);
+	}
+
+	/*=============================================
+	Respuestas del controlador
+	=============================================*/
+
+	public function fncResponse($response)
+	{
+
+		if (!empty($response)) {
+
+			$json = array(
+
+				'status' => 200,
+				'total' => count($response),
+				'results' => $response
+
+			);
+		} else {
+
+			$json = array(
+
+				'status' => 404,
+				'results' => 'Not Found',
+				'method' => 'get'
+
+			);
+		}
+
+		echo json_encode($json, http_response_code($json["status"]));
+	}
 }

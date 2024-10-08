@@ -1,85 +1,111 @@
 <?php
 
 require_once "models/connection.php";
-require_once "controllers/routers.controllers.php";
 require_once "controllers/get.controller.php";
 
 $routesArray = explode("/", $_SERVER['REQUEST_URI']);
 $routesArray = array_filter($routesArray);
 
-//validamos cuando no se hace una peticion a la api
-if (count($routesArray) == 0) {
-    $json = array(
-        "status" => 404,
-        "results" => "Not Found"
-    );
+/*=============================================
+Cuando no se hace ninguna petición a la API
+=============================================*/
 
-    echo json_encode($json, http_response_code($json["status"]));
-    return;
+if(count($routesArray) == 0){
+
+	$json = array(
+
+		'status' => 404,
+		'results' => 'Not Found'
+
+	);
+
+	echo json_encode($json, http_response_code($json["status"]));
+
+	return;
+
 }
 
-//validamos cuando si se hace una peticion a la api
-if (count($routesArray) == 1 && isset($_SERVER['REQUEST_METHOD'])) {
-    $table = explode("?", $routesArray[1])[0]; // $routesArray[1][0]
-    //TAREA COMPLETAR PARA VALIDAR LA LLAVE SECRETA "aoi key"
+/*=============================================
+Cuando si se hace una petición a la API
+=============================================*/
 
+if(count($routesArray) == 1 && isset($_SERVER['REQUEST_METHOD'])){
 
-    //validacion
-    $secret_key = Connection::apikey();
-    $headers = apache_request_headers();
+	$table = explode("?", $routesArray[1])[0];
 
-    if (in_array($table, (Connection::publicAccess()))) {
-        
-        $response = new GetController();
-        $response->getData($table, "*", null, null, null, null);
+	/*=============================================
+	Validar llave secreta
+	=============================================*/
 
-        // validamos cuando se hace una petici贸n GET
-        if ($_SERVER['REQUEST_METHOD'] == "GET") {
-            include "Services/get.php";
-        }
-        // validamos cuando se hace una petici贸n POST
-        if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            include "Services/post.php";
-        }
-        // validamos cuando se hace una petici贸n PUT
-        if ($_SERVER['REQUEST_METHOD'] == "PUT") {
-            include "Services/put.php";
-        }
-        // validamos cuando se hace una petici贸n DELETE
-        if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
-            include "Services/delete.php";
-        }
-    } else {
-        if (!isset($headers['Authorization']) || $headers['Authorization'] != $secret_key) {
-            $json = array(
-                "status" => 401,
-                "results" => "Unauthorized"
-            );
-            echo json_encode($json);
-            http_response_code($json['status']);
+	/**if(!isset(getallheaders()["Authorization"]) || getallheaders()["Authorization"] != Connection::apikey()){
 
-            return;
-        } else {
-            $respose = new GetController();
-            /* $respose->getData($table, "*", null, null, null, null);
- */
-            //validamos cuando se hace una peticion GET
-            if ($_SERVER['REQUEST_METHOD'] == "GET") {
-                include "Services/get.php";
-            }
-            //validamos cuando se hace una peticion POST
-            if ($_SERVER['REQUEST_METHOD'] == "POST") {
-                include "Services/post.php";
-            }
-            //validamos cuando se hace una peticion PUT
-            if ($_SERVER['REQUEST_METHOD'] == "PUT") {
-                include "Services/put.php";
-            }
-            //validamos cuando se hace una peticion DELETE
-            if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
-                include "Services/delete.php";
-            }
-        }
-    }
+		if($table!='relations'&&in_array($table, Connection::publicAccess()) == 0){
+	
+			$json = array(
+		
+				'status' => 400,
+				"results" => "You are not authorized to make this request"
+				
+			);
+
+			echo json_encode($json, http_response_code($json["status"]));
+
+			return;
+
+		}else{
+
+			/*=============================================
+			Acceso público
+			=============================================/
+			
+	    	$response = new GetController();
+			$response -> getData($table, "*",null,null,null,null);
+            
+			return;
+		}
+	
+	}**/
+	
+
+	/*=============================================
+	Peticiones GET
+	=============================================*/
+
+	if($_SERVER['REQUEST_METHOD'] == "GET"){
+
+		include "services/get.php";
+
+	}
+
+	/*=============================================
+	Peticiones POST
+	=============================================*/
+
+	if($_SERVER['REQUEST_METHOD'] == "POST"){
+
+		include "services/post.php";
+
+	}
+
+	/*=============================================
+	Peticiones PUT
+	=============================================*/
+
+	if($_SERVER['REQUEST_METHOD'] == "PUT"){
+
+		include "services/put.php";
+
+	}
+
+	/*=============================================
+	Peticiones DELETE
+	=============================================*/
+
+	if($_SERVER['REQUEST_METHOD'] == "DELETE"){
+
+		include "services/delete.php";
+
+	}
+
 }
-?>
+

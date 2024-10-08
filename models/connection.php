@@ -1,97 +1,185 @@
 <?php
 
+require_once "get.model.php";
+
 class Connection
 {
-    /* Información de la BD */
-    static public function infoDatabase()
-    {
-        return array(
-            "database" => "tienda",
-            "user" => "user_node",
-            "pass" => "123456"
-        );
-    }
 
-    // apikey
-    static public function apikey()
-    {
-        return "MYAPI";
-    }
+	/*=============================================
+	Información de la base de datos
+	=============================================*/
 
-    static public function publicAccess()
-    {
-        // Las tablas que queremos que sean públicas
-        return ["productos", "users"];
-    }
+	static public function infoDatabase()
+	{
 
-    static public function connect()
-    {
-        try {
-            $link = new PDO(
-                "mysql:host=localhost;dbname=" . Connection::infoDatabase()["database"],
-                Connection::infoDatabase()["user"],
-                Connection::infoDatabase()["pass"]
-            );
-            $link->exec("set names utf8");
-        } catch (PDOException $e) {
-            die("Error: " . $e->getMessage());
-        }
-        return $link;
-    }
+		$infoDB = array(
 
-    /* Validar existencia de tablas y columnas en la base de datos */
-static public function getColumnsData($table, $columns)
-{
-    // Traer el nombre de la base de datos
-    $database = Connection::infoDatabase()["database"];
+			"database" => "u145597152_grupocinco2",
+			"user" => "u145597152_ugrupocinco2",
+			"pass" => "E=VGfw>2"
 
-    // Obtener todas las columnas de la tabla en la base de datos
-    $query = Connection::connect()->query(
-        "SELECT column_name FROM information_schema.columns 
-        WHERE table_schema = '$database' AND table_name = '$table'"
-    );
+		);
 
-    $result = $query->fetchAll(PDO::FETCH_COLUMN);
+		return $infoDB;
+	}
 
-    // Validar la existencia de la tabla (si no tiene columnas, no existe)
-    if (empty($result)) {
-        return null; // La tabla no existe
-    }
+	/*=============================================
+	APIKEY
+	=============================================*/
 
-    // Validar que $columns no esté vacío
-    if (empty($columns) || !is_array($columns)) {
-        return null; // Retornar null si $columns está vacío o no es un array
-    }
+	static public function apikey()
+	{
 
-    // Si se solicitó "*", significa que no importa la validación de columnas
-    if ($columns[0] == "*") {
-        return $result; // Retornar todas las columnas
-    }
+		return "c5LTA6WPbMwHhEabYu77nN9cn4VcMj";
+	}
 
-    // Validar que las columnas solicitadas existan en la tabla
-    foreach ($columns as $column) {
-        if (!in_array($column, $result)) {
-            return null; // La columna no existe en la tabla
-        }
-    }
+	/*=============================================
+	Acceso público
+	=============================================*/
+	static public function publicAccess()
+	{
 
-    return $result; // Retornar las columnas si todo está bien
-}
+		$tables = ["usuarios", "barrios", "intructors"];
+
+		return $tables;
+	}
+
+	/*=============================================
+	Conexión a la base de datos
+	=============================================*/
+
+	static public function connect()
+	{
 
 
-    /* Método para generar token JWT */
-    public static function jwt($id, $email)
-    {
-        $key = "a2%4ndjle$%&ashbdajs-5avs"; // Clave secreta para firmar el token
-        $issuedAt = time();
-        $expirationTime = $issuedAt + 3600; // Tiempo de expiración: 1 hora
-        $payload = array(
-            'iat' => $issuedAt, // Tiempo de emisión
-            'exp' => $expirationTime, // Tiempo de expiración
-            'id' => $id, // ID del usuario
-            'email' => $email // Email del usuario
-        );
+		try {
 
-        return $payload; // Devolver el payload para codificarlo más adelante
-    }
+			$link = new PDO(
+				"mysql:host=localhost;dbname=" . Connection::infoDatabase()["database"],
+				Connection::infoDatabase()["user"],
+				Connection::infoDatabase()["pass"]
+			);
+
+			$link->exec("set names utf8");
+		} catch (PDOException $e) {
+
+			die("Error: " . $e->getMessage());
+		}
+
+		return $link;
+	}
+
+	/*=============================================
+	Validar existencia de una tabla en la bd
+	=============================================*/
+
+	static public function getColumnsData($table, $columns)
+	{
+
+
+		/*=============================================
+		Traer el nombre de la base de datos
+		=============================================*/
+
+		$database = Connection::infoDatabase()["database"];
+
+		/*=============================================
+		Traer todas las columnas de una tabla
+		=============================================*/
+
+		$validate = Connection::connect()
+			->query("SELECT COLUMN_NAME AS item FROM information_schema.columns WHERE table_schema = '$database' AND table_name = '$table'")
+			->fetchAll(PDO::FETCH_OBJ);
+
+		/*=============================================
+		Validamos existencia de la tabla
+		=============================================*/
+
+		if (empty($validate)) {
+
+			return null;
+		} else {
+
+			/*=============================================
+			Ajuste de selección de columnas globales
+			=============================================*/
+
+			if ($columns[0] == "*") {
+
+				array_shift($columns);
+			}
+
+			/*=============================================
+			Validamos existencia de columnas
+			=============================================*/
+
+			$sum = 0;
+
+			foreach ($validate as $key => $value) {
+
+				$sum += in_array($value->item, $columns);
+			}
+
+
+
+			return $sum == count($columns) ? $validate : null;
+		}
+	}
+
+	/*=============================================
+	Generar Token de Autenticación
+	=============================================*/
+
+	static public function jwt($id, $email)
+	{
+
+		$time = time();
+
+		$token = array(
+
+			"iat" =>  $time, //Tiempo en que inicia el token
+			"exp" => $time + (60 * 60 * 24), // Tiempo en que expirará el token (1 día)
+			"data" => [
+
+				"id" => $id,
+				"email" => $email
+			]
+
+		);
+
+		return $token;
+	}
+
+	/*=============================================
+	Validar el token de seguridad
+	=============================================*/
+
+	static public function tokenValidate($token, $table, $suffix)
+	{
+
+		/*=============================================
+		Traemos el usuario de acuerdo al token
+		=============================================*/
+		$user = GetModel::getDataFilter($table, "token_exp_" . $suffix, "token_" . $suffix, $token, null, null, null, null);
+
+		if (!empty($user)) {
+
+			/*=============================================
+			Validamos que el token no haya expirado
+			=============================================*/
+
+			$time = time();
+
+			if ($time < $user[0]->{"token_exp_" . $suffix}) {
+
+				return "ok";
+			} else {
+
+				return "expired";
+			}
+		} else {
+
+			return "no-auth";
+		}
+	}
 }

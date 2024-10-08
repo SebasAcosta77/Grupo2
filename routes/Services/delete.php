@@ -3,45 +3,99 @@
 require_once "models/connection.php";
 require_once "controllers/delete.controller.php";
 
-if (isset($_GET["id"]) && isset($_GET["nameId"])) {
-    $table = $_GET["table"];
-    $id = $_GET["id"];
-    $nameId = $_GET["nameId"];
+if(isset($_GET["id"]) && isset($_GET["nameId"])){
 
-    // Check if the column exists in the table
-    $columns = array($nameId);
-    if (empty(Connection::getColumnsData($table, $columns))) {
-        $json = array(
-            "status" => 400,
-            "result" => "Los datos no coinciden"
-        );
-        echo json_encode($json, http_response_code($json["status"]));
-        return;
-    }
+	$columns = array($_GET["nameId"]);
 
-    $response = DeleteController::deleteData($table, $id, $nameId);
+	/*=============================================
+	Validar la tabla y las columnas
+	=============================================*/
 
-    if ($response) {
-        $json = array(
-            "status" => 200,
-            "result" => "El registro ha sido eliminado"
-        );
-    } else {
-        $json = array(
-            "status" => 400,
-            "result" => "No se pudo eliminar el registro"
-        );
-    }
+	if(empty(Connection::getColumnsData($table, $columns))){
 
-    echo json_encode($json, http_response_code($json["status"]));
-} else {
-    $json = array(
-        "status" => 400,
-        "result" => "Faltan parámetros"
-    );
-    echo json_encode($json, http_response_code($json["status"]));
+		$json = array(
+		 	'status' => 400,
+		 	'results' => "Error: Fields in the form do not match the database"
+		);
+
+		echo json_encode($json, http_response_code($json["status"]));
+
+		return;
+
+	}
+
+	/*=============================================
+	Peticion DELETE para usuarios autorizados
+	=============================================*/
+
+	if(isset($_GET["token"])){
+
+		$tableToken = $_GET["table"] ?? "users";
+		$suffix = $_GET["suffix"] ?? "user";
+
+		$validate = Connection::tokenValidate($_GET["token"],$tableToken,$suffix);
+
+		/*=============================================
+		Solicitamos respuesta del controlador para eliminar datos en cualquier tabla
+		=============================================*/	
+			
+		if($validate == "ok"){
+	
+			$response = new DeleteController();
+			$response -> deleteData($table,$_GET["id"],$_GET["nameId"]);
+
+		}
+
+		/*=============================================
+		Error cuando el token ha expirado
+		=============================================*/	
+
+		if($validate == "expired"){
+
+			$json = array(
+			 	'status' => 303,
+			 	'results' => "Error: The token has expired"
+			);
+
+			echo json_encode($json, http_response_code($json["status"]));
+
+			return;
+
+		}
+
+		/*=============================================
+		Error cuando el token no coincide en BD
+		=============================================*/	
+
+		if($validate == "no-auth"){
+
+			$json = array(
+			 	'status' => 400,
+			 	'results' => "Error: The user is not authorized"
+			);
+
+			echo json_encode($json, http_response_code($json["status"]));
+
+			return;
+
+		}
+
+	/*=============================================
+	Error cuando no envía token
+	=============================================*/	
+
+	}else{
+
+		$json = array(
+		 	'status' => 400,
+		 	'results' => "Error: Authorization required"
+		);
+
+		echo json_encode($json, http_response_code($json["status"]));
+
+		return;	
+
+	}	
+
 }
 
-/**Tarea: Validar el token si coincide o no con el alamacenado en la base de datos */
-
-?>
