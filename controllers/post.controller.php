@@ -34,9 +34,20 @@ class PostController{
 
 			$crypt = crypt($data["password_".$suffix], '$2a$07$azybxcags23425sdg23sdfhsd$');
 
+<<<<<<< HEAD
 			$data["password_".$suffix] = $crypt;
 
 			$response = PostModel::postData($table, $data);
+=======
+    public function postPasswordRecoveryRequest($table, $data, $suffix)
+    {
+        if (!isset($data["email_" . $suffix])) {
+            self::fncResponse(null, "Correo requerido", $suffix);
+            return;
+        }
+
+        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null);
+>>>>>>> parent of 4914481 (SIIIIIII)
 
 			$return = new PostController();
 			$return -> fncResponse($response,null,$suffix);
@@ -49,12 +60,19 @@ class PostController{
 
 			$response = PostModel::postData($table, $data);
 
+<<<<<<< HEAD
 			if(isset($response["comment"]) && $response["comment"] == "The process was successful" ){
+=======
+            if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+                // Crear una instancia de EmailSender
+                $emailSender = new EmailSender();
+>>>>>>> parent of 4914481 (SIIIIIII)
 
 				/*=============================================
 				Validar que el usuario exista en BD
 				=============================================*/
 
+<<<<<<< HEAD
 				$response = GetModel::getDataFilter($table, "*", "email_".$suffix, $data["email_".$suffix], null,null,null,null);
 				
 				if(!empty($response)){		
@@ -250,3 +268,50 @@ class PostController{
 	}
 
 }
+=======
+                if ($emailSent) {
+                    error_log("Email enviado correctamente");
+                    self::fncResponse([
+                        "message" => "Código de recuperación enviado a tu correo"
+                    ], null, $suffix);
+                } else {
+                    self::fncResponse(null, "Error enviando el email", $suffix);
+                }
+            } else {
+                self::fncResponse(null, "Error actualizando el usuario", $suffix);
+            }
+        } else {
+            self::fncResponse(null, "Email no encontrado", $suffix);
+        }
+    }
+
+    public function postRecoveryResponse($email)
+    {
+        $response = PostModel::sendRecoveryCode($email);
+        self::fncResponse($response, null, null);
+    }
+
+    /*Función para responder JSON*/
+    public static function fncResponse($response, $error, $suffix)
+    {
+        header('Content-Type: application/json'); // Establecer tipo de contenido JSON
+        if (!empty($response) && is_array($response) && isset($response[0])) {
+            if (isset($response[0]->{"password_" . $suffix})) {
+                unset($response[0]->{"password_" . $suffix});
+            }
+            $json = array(
+                'status' => 200,
+                'result' => $response
+            );
+            http_response_code(200);
+        } else {
+            $json = array(
+                'status' => 400,
+                'result' => $error ?? 'Error en la solicitud'
+            );
+            http_response_code(400);
+        }
+        echo json_encode($json);
+    }
+}
+>>>>>>> parent of 4914481 (SIIIIIII)

@@ -3,6 +3,24 @@ Options -MultiViews
 
 RewriteEngine On
 
+<<<<<<< HEAD
+=======
+# Evitar acceso a archivos sensibles
+<FilesMatch "\.(env|ini|log|htaccess)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Redirigir a una página de error personalizada
+ErrorDocument 404 /404.php
+
+# Verifica si el archivo o directorio existe
+>>>>>>> parent of 4914481 (SIIIIIII)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [QSA,L]
 
+<<<<<<< HEAD
+=======
+# Redirige todas las solicitudes a index.php
+RewriteRule ^ index.php [QSA,L]
+>>>>>>> parent of 4914481 (SIIIIIII)
