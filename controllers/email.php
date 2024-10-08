@@ -15,24 +15,19 @@ class EmailSender {
 
     private function configureMailer() {
         $this->mailer->isSMTP();
-        $this->mailer->Host       = getenv('SMTP_HOST'); // Usa una variable de entorno
+        $this->mailer->Host       = 'smtp.hostinger.com';
         $this->mailer->SMTPAuth   = true;
-        $this->mailer->Username   = getenv('SMTP_USER'); // Usa una variable de entorno
-        $this->mailer->Password   = getenv('SMTP_PASSWORD'); // Usa una variable de entorno
+        $this->mailer->Username   = 'jdavidmartinez@jdc.edu.co';
+        $this->mailer->Password   = 'Jdc.email.2024';
         $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; 
-        $this->mailer->Port       = 465; // Puerto SMTP
+        $this->mailer->Port       = 465;
         $this->mailer->CharSet    = 'UTF-8';
-        $this->mailer->Timeout    = 30; // Timeout
-        $this->mailer->setFrom(getenv('SMTP_FROM'), 'cambio clave jdc'); // Usa una variable de entorno
+        $this->mailer->Timeout    = 30; // Añade un timeout
+        $this->mailer->setFrom('jdavidmartinez@jdc.edu.co', 'cambio calve jdc');
         $this->mailer->isHTML(true);
     }
 
     public function sendRecoveryCode($to, $code) {
-        // Validar la dirección de correo electrónico
-        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-            return ['success' => false, 'message' => 'Correo electrónico no válido.'];
-        }
-        
         try {
             $this->mailer->addAddress($to);
             $this->mailer->Subject = 'Código de Recuperación de Contraseña';
@@ -43,10 +38,10 @@ class EmailSender {
             $this->mailer->AltBody = "Tu código de recuperación es: $code. Este código expirará en 1 hora.";
 
             $this->mailer->send();
-            return ['success' => true, 'message' => 'Correo enviado correctamente.'];
+            return true;
         } catch (Exception $e) {
             error_log("Error al enviar correo: {$this->mailer->ErrorInfo}");
-            return ['success' => false, 'message' => 'Error al enviar correo: ' . $this->mailer->ErrorInfo];
+            return false;
         }
     }
 
@@ -92,6 +87,9 @@ class EmailSender {
 
 // Ejemplo de uso
 $emailSender = new EmailSender();
-$response = $emailSender->sendRecoveryCode('recipient@example.com', '123456');
-echo $response['message'];
+if ($emailSender->sendRecoveryCode('recipient@example.com', '123456')) {
+    echo 'El correo fue enviado correctamente.';
+} else {
+    echo 'No se pudo enviar el correo.';
+}
 ?>

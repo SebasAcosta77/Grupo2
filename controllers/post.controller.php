@@ -1,300 +1,163 @@
-<?php 
-
-require_once "models/get.model.php";
-require_once "models/post.model.php";
-require_once "models/connection.php";
-
+<?php
 require_once "vendor/autoload.php";
+require_once "models/postModel.php";
+
 use Firebase\JWT\JWT;
 
-require_once "models/put.model.php";
+class PostController
+{
+    /*Función generalizada para registro y login*/
+    static public function postAuthResponse($table, $data, $suffix, $isLogin = false)
+    {
+        // En caso de login
+        if ($isLogin) {
+            $response = GetModel::getRelDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null, null, null);
+            // Verificamos si el usuario existe
+            if (!empty($response)) {
+                // Verificar contraseña
+                if (isset($response[0]->{"password_" . $suffix}) && password_verify($data["password_" . $suffix], $response[0]->{"password_" . $suffix})) {
+                    // Generar token JWT si la contraseña es correcta
+                    $token = Connection::jwt($response[0]->{"id_" . $suffix}, $response[0]->{"email_" . $suffix});
+                    $jwt = JWT::encode($token, "a2%4ndjle$%&ashbdajs-5avs");
 
-class PostController{
+                    // Actualizar token y fecha de expiración en la base de datos
+                    $updateData = array(
+                        "token_" . $suffix => $jwt,
+                        "token_exp_" . $suffix => $token["exp"]
+                    );
+                    $update = PutModel::putData($table, $updateData, $response[0]->{"id_" . $suffix}, "id_" . $suffix);
 
-	/*=============================================
-	Peticion POST para crear datos
-	=============================================*/
+                    if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+                        $response[0]->{"token_" . $suffix} = $jwt;
+                        $response[0]->{"token_exp_" . $suffix} = $token["exp"];
+                    }
 
-	static public function postData($table, $data){
+                    // Retornar respuesta de éxito
+                    return self::fncResponse($response, null, $suffix);
+                } else {
+                    // Contraseña incorrecta
+                    return self::fncResponse(null, "Contraseña incorrecta", $suffix);
+                }
+            } else {
+                // Usuario no encontrado
+                return self::fncResponse(null, "Usuario no encontrado", $suffix);
+            }
+        } else {
+            // Caso de registro
+            // Generar un código de recuperación aleatorio de 6 dígitos
+            $data["codigo_recuperacion_" . $suffix] = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-		$response = PostModel::postData($table, $data);
-		
-		$return = new PostController();
-		$return -> fncResponse($response,null,null);
+            // Encriptar contraseña si está presente
+            if (isset($data["password_" . $suffix]) && !empty($data["password_" . $suffix])) {
+                $data["password_" . $suffix] = password_hash($data["password_" . $suffix], PASSWORD_BCRYPT);
+            }
 
-	}
+            // Llamamos al modelo para registrar los datos
+            $response = PostModel::postData($table, $data);
 
-	/*=============================================
-	Peticion POST para registrar usuario
-	=============================================*/
+            // Retornar respuesta de éxito
+            return self::fncResponse($response, null, $suffix);
+        }
+    }
 
-	static public function postRegister($table, $data, $suffix){
+    /* Función para generar un nuevo código de recuperación */
+    public static function generateRecoveryCode($table, $email, $suffix, $recuperacion)
+    {
+        // Buscar usuario por email
+        $response = GetModel::getRelDataFilter($table, "*", "email_" . $suffix, $email, null, null, null, null, null); // Cambiado $data a $email
+        if (!empty($response)) {
+            if ($recuperacion == true) {
+                // Generar un nuevo código de recuperación de 6 dígitos
+                $newCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-		if(isset($data["password_".$suffix]) && $data["password_".$suffix] != null){
+                // Actualizar el código de recuperación en la base de datos
+                $updateData = array(
+                    "codigo_recuperacion_" . $suffix => $newCode
+                );
+                $update = PutModel::putData($table, $updateData, $response[0]->{"id_" . $suffix}, "id_" . $suffix);
 
-			$crypt = crypt($data["password_".$suffix], '$2a$07$azybxcags23425sdg23sdfhsd$');
+                if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+                    // Enviar respuesta con el nuevo código de recuperación
+                    $response[0]->{"codigo_recuperacion_" . $suffix} = $newCode;
+                    return self::fncResponse($response, null, $suffix);
+                } else {
+                    return self::fncResponse(null, "Error al actualizar el código de recuperación", $suffix);
+                }
+            }
+        } else {
+            return self::fncResponse(null, "Usuario no encontrado", $suffix);
+        }
+    }
 
-<<<<<<< HEAD
-			$data["password_".$suffix] = $crypt;
-
-			$response = PostModel::postData($table, $data);
-=======
     public function postPasswordRecoveryRequest($table, $data, $suffix)
     {
         if (!isset($data["email_" . $suffix])) {
-            self::fncResponse(null, "Correo requerido", $suffix);
+            $this->fncResponse(null, "correo requerido", $suffix);
             return;
         }
 
-        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null);
->>>>>>> parent of 4914481 (SIIIIIII)
+        $user = GetModel::getDataFilter($table, "*", "email_" . $suffix, $data["email_" . $suffix], null, null, null, null);
 
-			$return = new PostController();
-			$return -> fncResponse($response,null,$suffix);
+        if (!empty($user)) {
+            // Generar un código numérico aleatorio de 6 dígitos
+            $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-		}else{
+            // Establecer el tiempo de expiración a 1 hora desde ahora
+            $expiration = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-			/*=============================================
-			Registro de usuarios desde APP externas
-			=============================================*/
+            $updateData = [
+                "reset_code_" . $suffix => $code,
+                "reset_code_exp_" . $suffix => $expiration,
+                "reset_attempts_" . $suffix => 0
+            ];
 
-			$response = PostModel::postData($table, $data);
+            $update = PutModel::putData($table, $updateData, $user[0]->{"id_" . $suffix}, "id_" . $suffix);
 
-<<<<<<< HEAD
-			if(isset($response["comment"]) && $response["comment"] == "The process was successful" ){
-=======
-            if (isset($update["comentario"]) && $update["comentario"] == "el proceso fue satisfactorio") {
+            if (isset($update["comment"]) && $update["comment"] == "The process was successful") {
                 // Crear una instancia de EmailSender
                 $emailSender = new EmailSender();
->>>>>>> parent of 4914481 (SIIIIIII)
 
-				/*=============================================
-				Validar que el usuario exista en BD
-				=============================================*/
+                // Enviar el correo
+                $emailSent = $emailSender->sendRecoveryCode($data["email_" . $suffix], $code);
 
-<<<<<<< HEAD
-				$response = GetModel::getDataFilter($table, "*", "email_".$suffix, $data["email_".$suffix], null,null,null,null);
-				
-				if(!empty($response)){		
-
-					$token = Connection::jwt($response[0]->{"id_".$suffix}, $response[0]->{"email_".$suffix});
-
-					$jwt = JWT::encode($token, "dfhsdfg34dfchs4xgsrsdry46");
-
-					/*=============================================
-					Actualizamos la base de datos con el Token del usuario
-					=============================================*/
-
-					$data = array(
-
-						"token_".$suffix => $jwt,
-						"token_exp_".$suffix => $token["exp"]
-
-					);
-
-					$update = PutModel::putData($table, $data, $response[0]->{"id_".$suffix}, "id_".$suffix);
-
-					if(isset($update["comment"]) && $update["comment"] == "The process was successful" ){
-
-						$response[0]->{"token_".$suffix} = $jwt;
-						$response[0]->{"token_exp_".$suffix} = $token["exp"];
-
-						$return = new PostController();
-						$return -> fncResponse($response, null,$suffix);
-
-					}
-
-				}
-
-
-			}
-
-
-		}
-
-	}
-
-	/*=============================================
-	Peticion POST para login de usuario
-	=============================================*/
-
-	static public function postLogin($table, $data, $suffix){
-
-		/*=============================================
-		Validar que el usuario exista en BD
-		=============================================*/
-
-		$response = GetModel::getDataFilter($table, "*", "email_".$suffix, $data["email_".$suffix], null,null,null,null);
-		
-		if(!empty($response)){	
-
-			if($response[0]->{"password_".$suffix} != null)	{
-			
-				/*=============================================
-				Encriptamos la contraseña
-				=============================================*/
-
-				$crypt = crypt($data["password_".$suffix], '$2a$07$azybxcags23425sdg23sdfhsd$');
-
-				if($response[0]->{"password_".$suffix} == $crypt){
-
-					$token = Connection::jwt($response[0]->{"id_".$suffix}, $response[0]->{"email_".$suffix});
-
-					$jwt = JWT::encode($token, "dfhsdfg34dfchs4xgsrsdry46");
-
-					/*=============================================
-					Actualizamos la base de datos con el Token del usuario
-					=============================================*/
-
-					$data = array(
-
-						"token_".$suffix => $jwt,
-						"token_exp_".$suffix => $token["exp"]
-
-					);
-
-					$update = PutModel::putData($table, $data, $response[0]->{"id_".$suffix}, "id_".$suffix);
-
-					if(isset($update["comment"]) && $update["comment"] == "The process was successful" ){
-
-						$response[0]->{"token_".$suffix} = $jwt;
-						$response[0]->{"token_exp_".$suffix} = $token["exp"];
-
-						$return = new PostController();
-						$return -> fncResponse($response, null,$suffix);
-
-					}
-					
-					
-				}else{
-
-					$response = null;
-					$return = new PostController();
-					$return -> fncResponse($response, "Wrong password",$suffix);
-
-				}
-
-			}else{
-
-				/*=============================================
-				Actualizamos el token para usuarios logueados desde app externas
-				=============================================*/
-
-				$token = Connection::jwt($response[0]->{"id_".$suffix}, $response[0]->{"email_".$suffix});
-
-				$jwt = JWT::encode($token, "dfhsdfg34dfchs4xgsrsdry46");				
-
-				$data = array(
-
-					"token_".$suffix => $jwt,
-					"token_exp_".$suffix => $token["exp"]
-
-				);
-
-				$update = PutModel::putData($table, $data, $response[0]->{"id_".$suffix}, "id_".$suffix);
-
-				if(isset($update["comment"]) && $update["comment"] == "The process was successful" ){
-
-					$response[0]->{"token_".$suffix} = $jwt;
-					$response[0]->{"token_exp_".$suffix} = $token["exp"];
-
-					$return = new PostController();
-					$return -> fncResponse($response, null,$suffix);
-
-				}
-
-			}
-
-		}else{
-
-			$response = null;
-			$return = new PostController();
-			$return -> fncResponse($response, "Wrong email",$suffix);
-
-		}
-
-
-	}
-
-	/*=============================================
-	Respuestas del controlador
-	=============================================*/
-
-	public function fncResponse($response,$error,$suffix){
-
-		if(!empty($response)){
-
-			/*=============================================
-			Quitamos la contraseña de la respuesta
-			=============================================*/
-
-			if(isset($response[0]->{"password_".$suffix})){
-
-				unset($response[0]->{"password_".$suffix});
-
-			}
-
-			$json = array(
-
-				'status' => 200,
-				'results' => $response
-
-			);
-
-		}else{
-
-			if($error != null){
-
-				$json = array(
-					'status' => 400,
-					"results" => $error
-				);
-
-			}else{
-
-				$json = array(
-
-					'status' => 404,
-					'results' => 'Not Found',
-					'method' => 'post'
-
-				);
-			}
-
-		}
-
-		echo json_encode($json, http_response_code($json["status"]));
-
-	}
-
-}
-=======
                 if ($emailSent) {
+
                     error_log("Email enviado correctamente");
-                    self::fncResponse([
-                        "message" => "Código de recuperación enviado a tu correo"
+                    $this->fncResponse([
+                        "message" => "Recovery code sent to your email"
                     ], null, $suffix);
                 } else {
-                    self::fncResponse(null, "Error enviando el email", $suffix);
+                    $this->fncResponse(null, "Error enviado email", $suffix);
                 }
             } else {
-                self::fncResponse(null, "Error actualizando el usuario", $suffix);
+                $this->fncResponse(null, "Error actualizando usuario", $suffix);
             }
         } else {
-            self::fncResponse(null, "Email no encontrado", $suffix);
+            $this->fncResponse(null, "Email no encontrado", $suffix);
         }
     }
 
+
+    public function postRecovery($table, $data)
+    {
+        $email = $data['email']; // Asegúrate de que el email esté en los datos enviados
+        $response = PostModel::sendRecoveryCode($email);
+
+        echo json_encode($response, http_response_code($response['status']));
+    }
+
+
+    /** Método para manejar la recuperación de contraseña */
     public function postRecoveryResponse($email)
     {
         $response = PostModel::sendRecoveryCode($email);
-        self::fncResponse($response, null, null);
+        echo json_encode($response, http_response_code($response['status']));
     }
+
 
     /*Función para responder JSON*/
     public static function fncResponse($response, $error, $suffix)
     {
-        header('Content-Type: application/json'); // Establecer tipo de contenido JSON
         if (!empty($response) && is_array($response) && isset($response[0])) {
             if (isset($response[0]->{"password_" . $suffix})) {
                 unset($response[0]->{"password_" . $suffix});
@@ -303,15 +166,13 @@ class PostController{
                 'status' => 200,
                 'result' => $response
             );
-            http_response_code(200);
         } else {
             $json = array(
                 'status' => 400,
                 'result' => $error ?? 'Error en la solicitud'
             );
-            http_response_code(400);
         }
-        echo json_encode($json);
+
+        echo json_encode($json, http_response_code($json['status']));
     }
 }
->>>>>>> parent of 4914481 (SIIIIIII)
