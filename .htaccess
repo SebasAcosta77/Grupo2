@@ -1,0 +1,29 @@
+Options All -Indexes
+Options -MultiViews
+
+RewriteEngine On
+
+# Redirigir a index.php si el archivo no existe
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+
+# Manejo de errores personalizado
+ErrorDocument 404 /404.php
+
+# Seguridad adicional para evitar el acceso a archivos sensibles
+<FilesMatch "\.(htaccess|env|ini)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Configuración de almacenamiento en caché para recursos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
