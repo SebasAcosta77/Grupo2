@@ -29,7 +29,7 @@ class Connection
 	=============================================*/
 	static public function publicAccess()
 	{
-		return ["usuario", "libros", "usuario_libros"];
+		return ["usuario", "libros", "usuario_libro"];
 	}
 
 	/*=============================================
