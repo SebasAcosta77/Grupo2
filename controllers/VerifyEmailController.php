@@ -1,14 +1,14 @@
 <?php
 
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 require_once "Models/Connection.php";
 
-class VerifycorreoUsuarioController {
+class VerifyEmailController {
+
+
     
-    // Método para obtener la plantilla del correo
-    private function getcorreoUsuarioTemplate($code) {
+    private function getEmailTemplate($code) {
         return "
         <!DOCTYPE html>
         <html lang='es'>
@@ -47,11 +47,10 @@ class VerifycorreoUsuarioController {
         ";
     }
 
-    // Método para enviar el código de verificación
-    public function sendVerificationCode($correoUsuario) {
+    public function sendVerificationCode($email) {
         // 1. Verificar si el correo está en la base de datos
-        $stmt = Connection::connect()->prepare("SELECT * FROM usuario WHERE correoUsuario = :correoUsuario");
-        $stmt->bindParam(":correoUsuario", $correoUsuario, PDO::PARAM_STR);
+        $stmt = Connection::connect()->prepare("SELECT * FROM usuarios WHERE email = :email");
+        $stmt->bindParam(":email", $email, PDO::PARAM_STR);
         $stmt->execute();
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -70,36 +69,29 @@ class VerifycorreoUsuarioController {
         $verificationCode = rand(100000, 999999);
 
         // 3. Guardar el código y la expiración en la base de datos
+        $token = $verificationCode;
         $expiration = date('Y-m-d H:i:s', strtotime('+1 hour')); // Expira en 1 hora
 
-        $updateStmt = Connection::connect()->prepare("UPDATE usuario SET token_password = :token, expired_session = :expiration WHERE correoUsuario = :correoUsuario");
-        $updateStmt->bindParam(":token", $verificationCode, PDO::PARAM_STR);
+        $updateStmt = Connection::connect()->prepare("UPDATE usuarios SET token_password = :token, expired_session = :expiration WHERE email = :email");
+        $updateStmt->bindParam(":token", $token, PDO::PARAM_STR);
         $updateStmt->bindParam(":expiration", $expiration, PDO::PARAM_STR);
-        $updateStmt->bindParam(":correoUsuario", $correoUsuario, PDO::PARAM_STR);
+        $updateStmt->bindParam(":email", $email, PDO::PARAM_STR);
         $updateStmt->execute();
 
         // 4. Enviar el correo con PHPMailer
-        if ($this->sendcorreoUsuario($correoUsuario, $verificationCode)) {
-            // 5. Devolver respuesta exitosa
-            $json = array(
-                "status" => 200,
-                "results" => "Código de verificación enviado correctamente."
-            );
-            echo json_encode($json);
-            http_response_code(200);
-        } else {
-            // Si el envío del correo falla
-            $json = array(
-                "status" => 500,
-                "results" => "Error al enviar el correo de verificación."
-            );
-            echo json_encode($json);
-            http_response_code(500);
-        }
+        $this->sendEmail($email, $verificationCode);
+
+        // 5. Devolver respuesta exitosa
+        $json = array(
+            "status" => 200,
+            "results" => "Código de verificación enviado correctamente."
+        );
+        echo json_encode($json);
+        http_response_code(200);
     }
 
     // Método para enviar el correo
-    private function sendcorreoUsuario($correoUsuario, $verificationCode) {
+    private function sendEmail($email, $verificationCode) {
         $mail = new PHPMailer(true);
 
         try {
@@ -107,24 +99,71 @@ class VerifycorreoUsuarioController {
             $mail->Host       = 'smtp.hostinger.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'jdc@tunjatienevoz.com';
-            $mail->Password   = 'Jdc.correoUsuario.2024';
+            $mail->Password   = 'Jdc.email.2024';
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             $mail->Port       = 465;
             $mail->setFrom('jdc@tunjatienevoz.com', 'cambio clave jdc');
-            $mail->addAddress($correoUsuario);
+            $mail->addAddress($email);
 
             // Contenido del correo
             $mail->isHTML(true);
             $mail->Subject = 'Código de verificación';
-            $mail->Body = $this->getcorreoUsuarioTemplate($verificationCode);
 
-            // Enviar el correo
+            $body = $this -> getEmailTemplate($verificationCode);
+
+            $mail->Body = $body;
+
             $mail->send();
-            return true; // Retorna true si el envío fue exitoso
         } catch (Exception $e) {
-            // Manejar el error del envío
-            error_log("El mensaje no pudo ser enviado. Error: {$mail->ErrorInfo}"); // Registra el error
-            return false; // Retorna false si hubo un error
+            echo "El mensaje no pudo ser enviado. Error: {$mail->ErrorInfo}";
         }
+    }
+
+    public function changePassword($email, $code, $newPassword) {
+        // Conexión a la base de datos
+        $db = Connection::connect();
+
+        // Buscar el usuario por email
+        $stmt = $db->prepare("SELECT token_password, expired_session, failed_attempts FROM usuarios WHERE email = :email");
+        $stmt->bindParam(":email", $email, PDO::PARAM_STR);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Validar si el usuario existe
+        if (!$user) {
+            return json_encode(["status" => 404, "message" => "Usuario no encontrado"]);
+        }
+
+        // Validar el número de intentos fallidos
+        if ($user['failed_attempts'] >= 3) {
+            $stmt = $db->prepare("UPDATE usuarios SET password = :password, failed_attempts = 0, token_password = NULL, expired_session = NULL WHERE email = :email");
+            return json_encode(["status" => 403, "message" => "Has superado el número de intentos permitidos, genera un nuevo codigo"]);
+        }
+
+        // Validar si el código ha expirado
+        if (strtotime($user['expired_session']) < time()) {
+            return json_encode(["status" => 400, "message" => "El código ha expirado"]);
+        }
+
+        // Verificar si el código es correcto
+        if ($user['token_password'] != $code) {
+            // Incrementar el contador de intentos fallidos
+            $db->prepare("UPDATE usuarios SET failed_attempts = failed_attempts + 1 WHERE email = :email")
+               ->execute([":email" => $email]);
+
+            return json_encode(["status" => 400, "message" => "Código incorrecto"]);
+        }
+
+        // Cambiar la contraseña si el código es correcto
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT); // Encriptar la contraseña
+        $stmt = $db->prepare("UPDATE usuarios SET password = :password, failed_attempts = 0, token_password = NULL, expired_session = NULL WHERE email = :email");
+        $stmt->bindParam(":password", $hashedPassword, PDO::PARAM_STR);
+        $stmt->bindParam(":email", $email, PDO::PARAM_STR);
+
+        if ($stmt->execute()) {
+            return json_encode(["status" => 200, "message" => "Contraseña cambiada exitosamente"]);
+        }
+
+        return json_encode(["status" => 500, "message" => "Error al cambiar la contraseña"]);
     }
 }
