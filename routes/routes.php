@@ -27,49 +27,62 @@ if (count($routesArray) == 1 && isset($_SERVER['REQUEST_METHOD'])) {
     /*=============================================
     Validar llave secreta
     =============================================*/
-    if (!isset(getallheaders()["Authorization"]) || getallheaders()["Authorization"] != Connection::apikey()) {
-        if ($table != 'relations' && in_array($table, Connection::publicAccess()) == 0) {
-            $json = array(
-                'status' => 403,
-                "results" => "You are not authorized to make this request"
-            );
-            echo json_encode($json, http_response_code($json["status"]));
-            return;
-        } else {
-            /*=============================================
-            Acceso público
-            =============================================*/
-            $response = new GetController();
-            $response->getData($table, "*", null, null, null, null);
-            return;
-        }
+    $headers = getallheaders();
+    $isAuthorized = isset($headers["Authorization"]) && $headers["Authorization"] == Connection::apikey();
+    
+    /*=============================================
+    Acceso a las tablas públicas
+    =============================================*/
+    if (in_array($table, Connection::publicAccess())) {
+        // Se permite el acceso tanto si hay autorización como si no
+        $response = new GetController();
+        $response->getData($table, "*", null, null, null, null);
+        return;
     }
 
     /*=============================================
-    Peticiones GET
+    Acceso a tablas no públicas solo con autorización
     =============================================*/
-    if ($_SERVER['REQUEST_METHOD'] == "GET") {
-        include "services/get.php";
+    if ($isAuthorized) {
+        // Si tiene autorización, puede acceder a cualquier tabla
+        $response = new GetController();
+        $response->getData($table, "*", null, null, null, null);
+        return;
+    } else {
+        // Si no tiene autorización y la tabla no es pública, se deniega el acceso
+        $json = array(
+            'status' => 403,
+            "results" => "You are not authorized to make this request"
+        );
+        echo json_encode($json, http_response_code($json["status"]));
+        return;
     }
+}
 
-    /*=============================================
-    Peticiones POST
-    =============================================*/
-    if ($_SERVER['REQUEST_METHOD'] == "POST") {
-        include "services/post.php";
-    }
+/*=============================================
+Peticiones GET
+=============================================*/
+if ($_SERVER['REQUEST_METHOD'] == "GET") {
+    include "services/get.php";
+}
 
-    /*=============================================
-    Peticiones PUT
-    =============================================*/
-    if ($_SERVER['REQUEST_METHOD'] == "PUT") {
-        include "services/put.php";
-    }
+/*=============================================
+Peticiones POST
+=============================================*/
+if ($_SERVER['REQUEST_METHOD'] == "POST") {
+    include "services/post.php";
+}
 
-    /*=============================================
-    Peticiones DELETE
-    =============================================*/
-    if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
-        include "services/delete.php";
-    }
+/*=============================================
+Peticiones PUT
+=============================================*/
+if ($_SERVER['REQUEST_METHOD'] == "PUT") {
+    include "services/put.php";
+}
+
+/*=============================================
+Peticiones DELETE
+=============================================*/
+if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
+    include "services/delete.php";
 }
